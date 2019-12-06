@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Drawing;
 using System.Diagnostics;
+using System.Collections.Generic;
 
 namespace ParallelProgramming
 {
@@ -30,6 +31,46 @@ namespace ParallelProgramming
             //Console.WriteLine("Processing Complete...");
 
 
+            // Schedule Tasks
+
+            LCTaskScheduler ts = new LCTaskScheduler(4);
+            List<Task> tasks = new List<Task>();
+
+            TaskFactory factory = new TaskFactory(ts);
+            CancellationTokenSource cts = new CancellationTokenSource();
+
+            Object lockObj = new Object();
+            int outItem = 0;
+
+
+            for (int tCtr = 0; tCtr <= 4; tCtr++)
+            {
+                int iteration = tCtr;
+                Task t = factory.StartNew(() => {
+                    for (int i = 0; i < 1000; i++)
+                    {
+                        lock (lockObj)
+                        {
+                            Console.Write("{0} in task t-{1} on thread {2}   ",
+                                          i, iteration, Thread.CurrentThread.ManagedThreadId);
+                            outItem++;
+                            if (outItem % 3 == 0)
+                                Console.WriteLine();
+                        }
+                    }
+                }, cts.Token);
+                tasks.Add(t);
+            }
+
+            // like a barrier
+            Task.WaitAll(tasks.ToArray());
+            cts.Dispose(); // safely delete token
+            Console.WriteLine("\n\nTask scheduler and work complete...");
+
+
+
+
+            #region MATMUL
             int cols = 200;
             int rows = 2000;
             int cols2 = 250;
@@ -67,7 +108,7 @@ namespace ParallelProgramming
             stopwatch.Stop();
 
             Console.Error.WriteLine("Parallel matMul time in milliseconds: {0}", stopwatch.ElapsedMilliseconds);
-
+            #endregion
         }
 
         static void SequentialMatMul(double[,] A, double[,] B, double[,] C)
