@@ -11,31 +11,36 @@ namespace ParallelProgramming
     class Program
     {
         private static int _tpSize = 8;
-        private static Dictionary<int, int> _tpCalculated = new Dictionary<int, int>();
+        private static int _arrSize = _tpSize + 1;
+        //private static Dictionary<int, int> _tpCalculated = new Dictionary<int, int>();
+        private  static int[] _tpCalculated = new int[_arrSize];
 
         static void Main(string[] args)
         {
-            // parallel foreach example
-            //string[] files = Directory.GetFiles(@"C:\Photos", "*.jpg");
-            //string newDir = @"C:\Temp\ModifiedPhotos";
-            //Directory.CreateDirectory(newDir);
+            #region Parallel For Example
 
-            //// flip all files upside down
-            //Parallel.ForEach(files, (currentFile) =>
-            //        {
-            //            string filename = Path.GetFileName(currentFile);
-            //            var bitmap = new Bitmap(currentFile);
+            // parallel foreach example, flips images in \|/ directory upside down
+            string[] files = Directory.GetFiles(@"C:\Photos", "*.jpg");
+            string newDir = @"C:\Temp\ModifiedPhotos";
+            Directory.CreateDirectory(newDir);
 
-            //            bitmap.RotateFlip(RotateFlipType.Rotate180FlipNone);
-            //            bitmap.Save(Path.Combine(newDir, filename));
+            // flip all files upside down
+            Parallel.ForEach(files, (currentFile) =>
+            {
+                string filename = Path.GetFileName(currentFile);
+                var bitmap = new Bitmap(currentFile);
 
-            //        });
+                bitmap.RotateFlip(RotateFlipType.Rotate180FlipNone);
+                bitmap.Save(Path.Combine(newDir, filename));
 
-            //Console.WriteLine("Processing Complete...");
+            });
+
+            Console.WriteLine("Photo processing Complete...");
+
+            #endregion
 
 
-            // Schedule Tasks
-            #region UsingTasksAndTaskScheduler
+            #region Using Tasks And A TaskScheduler
             LCTaskScheduler ts = new LCTaskScheduler(8);
             List<Task> tasks = new List<Task>();
 
@@ -71,33 +76,32 @@ namespace ParallelProgramming
             Console.WriteLine("\n\nTask scheduler and work complete...");
             #endregion
 
+            #region T1 with tasks
+            // like assignment T1 from class
+            // Tasks include more methods, such as WaitAll, which is like a barrier
+            
+            Task[] taskArray = new Task[_tpSize];
 
-            #region UsingTheThreadPool
-
-            // this is like Assignment: T1 from class
-            Console.WriteLine("Doing factorial and summation work with the ThreadPool...\n");
-
-
-            for (var i = 1; i <= _tpSize; i++)
+            for (var i = 0; i < taskArray.Length; i++)
             {
-                ThreadPool.QueueUserWorkItem(DoT1Work, i);
+                taskArray[i] = Task.Factory.StartNew((Object obj) => { DoT1Work(obj); }, i);
             }
 
-            Thread.Sleep(2000);
+            Task.WaitAll(taskArray);
 
-            var sortedCalculated = new SortedDictionary<int, int>(_tpCalculated);
 
-            foreach (var calculated in sortedCalculated)
+            for (int i = 0; i < taskArray.Length; i++)
             {
-                Console.WriteLine($"In Main: Thread {calculated.Key}'s calculated value: {calculated.Value}");
+                Console.WriteLine($"In Main: Thread {i + 1}'s calculated value: {_tpCalculated[i]}");
             }
 
-            // line break
-            Console.WriteLine();    
+            Console.WriteLine("\n");
             #endregion
 
 
             #region MATMUL
+            // timed sequentially and in parallel, and we see a nice speedup going from 
+            // sequential to parallel, from ~ 750ms down to ~200ms
             int cols = 200;
             int rows = 2000;
             int cols2 = 250;
@@ -140,18 +144,18 @@ namespace ParallelProgramming
 
         static void DoT1Work(Object stateInfo)
         {
-            var threadIndexToUse = (int) stateInfo;
+            var threadIndexToUse = (int) stateInfo + 1;
             Console.WriteLine($"Hello from ThreadPool task with managed tid: {Thread.CurrentThread.ManagedThreadId} and user id: {threadIndexToUse}");
 
             // even
             if (threadIndexToUse % 2 == 0)
             {
-                _tpCalculated.Add(threadIndexToUse, CalculateSummationTo(threadIndexToUse));
+                _tpCalculated[threadIndexToUse - 1] = CalculateSummationTo(threadIndexToUse);
             }
             // odd
             else
             {
-                _tpCalculated.Add(threadIndexToUse, CalculateFactorial(threadIndexToUse));
+                _tpCalculated[threadIndexToUse - 1] = CalculateFactorial(threadIndexToUse);
             }
         }
 
