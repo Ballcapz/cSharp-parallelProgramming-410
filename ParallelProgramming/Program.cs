@@ -10,6 +10,9 @@ namespace ParallelProgramming
 {
     class Program
     {
+        private static int _tpSize = 8;
+        private static Dictionary<int, int> _tpCalculated = new Dictionary<int, int>();
+
         static void Main(string[] args)
         {
             // parallel foreach example
@@ -32,8 +35,8 @@ namespace ParallelProgramming
 
 
             // Schedule Tasks
-
-            LCTaskScheduler ts = new LCTaskScheduler(4);
+            #region UsingTasksAndTaskScheduler
+            LCTaskScheduler ts = new LCTaskScheduler(8);
             List<Task> tasks = new List<Task>();
 
             TaskFactory factory = new TaskFactory(ts);
@@ -43,11 +46,11 @@ namespace ParallelProgramming
             int outItem = 0;
 
 
-            for (int tCtr = 0; tCtr <= 4; tCtr++)
+            for (int tCtr = 0; tCtr <= 8; tCtr++)
             {
                 int iteration = tCtr;
                 Task t = factory.StartNew(() => {
-                    for (int i = 0; i < 1000; i++)
+                    for (int i = 0; i < 8; i++)
                     {
                         lock (lockObj)
                         {
@@ -66,8 +69,32 @@ namespace ParallelProgramming
             Task.WaitAll(tasks.ToArray());
             cts.Dispose(); // safely delete token
             Console.WriteLine("\n\nTask scheduler and work complete...");
+            #endregion
 
 
+            #region UsingTheThreadPool
+
+            // this is like Assignment: T1 from class
+            Console.WriteLine("Doing factorial and summation work with the ThreadPool...\n");
+
+
+            for (var i = 1; i <= _tpSize; i++)
+            {
+                ThreadPool.QueueUserWorkItem(DoT1Work, i);
+            }
+
+            Thread.Sleep(2000);
+
+            var sortedCalculated = new SortedDictionary<int, int>(_tpCalculated);
+
+            foreach (var calculated in sortedCalculated)
+            {
+                Console.WriteLine($"In Main: Thread {calculated.Key}'s calculated value: {calculated.Value}");
+            }
+
+            // line break
+            Console.WriteLine();    
+            #endregion
 
 
             #region MATMUL
@@ -109,6 +136,45 @@ namespace ParallelProgramming
 
             Console.Error.WriteLine("Parallel matMul time in milliseconds: {0}", stopwatch.ElapsedMilliseconds);
             #endregion
+        }
+
+        static void DoT1Work(Object stateInfo)
+        {
+            var threadIndexToUse = (int) stateInfo;
+            Console.WriteLine($"Hello from ThreadPool task with managed tid: {Thread.CurrentThread.ManagedThreadId} and user id: {threadIndexToUse}");
+
+            // even
+            if (threadIndexToUse % 2 == 0)
+            {
+                _tpCalculated.Add(threadIndexToUse, CalculateSummationTo(threadIndexToUse));
+            }
+            // odd
+            else
+            {
+                _tpCalculated.Add(threadIndexToUse, CalculateFactorial(threadIndexToUse));
+            }
+        }
+
+        static int CalculateSummationTo(int val)
+        {
+            var retValue = 0;
+            for (var i = 1; i <= val; i++)
+            {
+                retValue += i;
+            }
+
+            return retValue;
+        }
+
+        static int CalculateFactorial(int val)
+        {
+            var retValue = 1;
+            for (var i = 1; i <= val; i++)
+            {
+                retValue *= i;
+            }
+
+            return retValue;
         }
 
         static void SequentialMatMul(double[,] A, double[,] B, double[,] C)
