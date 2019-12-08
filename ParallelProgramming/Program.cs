@@ -73,7 +73,7 @@ namespace ParallelProgramming
             // like a barrier
             Task.WaitAll(tasks.ToArray());
             cts.Dispose(); // safely delete token
-            Console.WriteLine("\n\nTask scheduler and work complete...");
+            Console.WriteLine("\nTask scheduler and work complete...\n\n");
             #endregion
 
             #region T1 with tasks
@@ -89,12 +89,13 @@ namespace ParallelProgramming
 
             Task.WaitAll(taskArray);
 
-
+            int sum = 0;
             for (int i = 0; i < taskArray.Length; i++)
             {
                 Console.WriteLine($"In Main: Thread {i + 1}'s calculated value: {_tpCalculated[i]}");
+                sum += _tpCalculated[i];
             }
-
+            Console.WriteLine($"In Main: Total Summation from threads: {sum}");
             Console.WriteLine("\n");
             #endregion
 
@@ -145,7 +146,8 @@ namespace ParallelProgramming
         static void DoT1Work(Object stateInfo)
         {
             var threadIndexToUse = (int) stateInfo + 1;
-            Console.WriteLine($"Hello from ThreadPool task with managed tid: {Thread.CurrentThread.ManagedThreadId} and user id: {threadIndexToUse}");
+            //Console.WriteLine($"Hello from thread with managed tid: {Thread.CurrentThread.ManagedThreadId} and user id: {threadIndexToUse}");
+            Console.WriteLine($"Hello from tid: {threadIndexToUse}");
 
             // even
             if (threadIndexToUse % 2 == 0)
